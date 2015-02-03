@@ -49,7 +49,7 @@ def main():
             wfs = [l.strip() for l in open(sys.argv[2]) if l.strip()]
         # if single workflow
         else:
-            wfs = [argv[1]]
+            wfs = [sys.argv[1]]
 
         for wf in wfs:
             print wf
