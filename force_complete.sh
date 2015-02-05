@@ -19,9 +19,9 @@ fc=""
 #workflow names
 for wf in $@
 do
-    fc="$fc;workqueue.doneWork(WorkflowName='$wf')";
+    fc="${fc}workqueue.doneWork(WorkflowName='$wf');";
 done
-fc="$fc;exit();"
+fc="${fc}exit();"
 com="sudo -u cmst1 /bin/bash --init-file ~cmst1/.bashrc
 agentenv
 echo \"$fc\" | \$manage execute-agent wmagent-workqueue -i
