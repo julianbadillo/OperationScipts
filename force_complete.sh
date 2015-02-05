@@ -1,14 +1,12 @@
-#!/bin/sh
+#!/usr/bin/sh
 # Connects to a list of agents calling the force-complete procedure described
 # here:
 # https://twiki.cern.ch/twiki/bin/view/CMSPublic/CompOpsWorkflowOperatorResponsiblities#Force_Complete_WorkFlows
 # author: Julian Badillo
 # before running: load your kerberos credentials
-# Usage: sh force_complete.sh WFNAME
+# Usage: sh force_complete.sh WFNAME1 [WFNAME2 ...]
 # 
 
-#workflow name
-wf=$1
 
 #list of agents
 fnal_agents="cmssrv217.fnal.gov cmssrv218.fnal.gov cmssrv219.fnal.gov cmsgwms-submit1.fnal.gov cmsgwms-submit2.fnal.gov"
@@ -16,7 +14,14 @@ fnal_agents="cmssrv217.fnal.gov cmssrv218.fnal.gov cmssrv219.fnal.gov cmsgwms-su
 cern_agents=""
 
 #generate command for CERN agents
-fc="workqueue.doneWork(WorkflowName='$wf');exit();"
+fc=""
+
+#workflow names
+for wf in $@
+do
+    fc="$fc;workqueue.doneWork(WorkflowName='$wf')";
+done
+fc="$fc;exit();"
 com="sudo -u cmst1 /bin/bash --init-file ~cmst1/.bashrc
 agentenv
 echo \"$fc\" | \$manage execute-agent wmagent-workqueue -i
