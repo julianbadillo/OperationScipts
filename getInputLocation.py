@@ -11,7 +11,8 @@
 import WmAgentScripts.reqMgrClient as reqMgrClient
 import WmAgentScripts.phedexClient as phedexClient
 import WmAgentScripts.dbs3Client as dbsClient
-import sys
+import sys, optparse
+url = 'cmsweb.cern.ch'
 
 def formatSize(size):
     """
@@ -27,42 +28,71 @@ def formatSize(size):
         return "%.2f"%(float(size)/10**12)+"K"
     return str(size)+" Bytes"
 
-
-def main():
-    url = 'cmsweb.cern.ch'
-
-    #if dataset given
-    if sys.argv[1] == '-d':
-        ds = sys.argv[2]
-        sites = sorted(phedexClient.getBlockReplicaSites(ds,True))
-        print ds
+def printDsLocation(ds, clean=False, anyb=False):
+    """
+    Only printing
+    """
+    onlycomplete = not anyb
+    sites = sorted(phedexClient.getBlockReplicaSites(ds, onlycomplete))
+    print ds
+    if onlycomplete:
         print "block replicas (only complete):"
-        print ', '.join(sites)
+    else:
+        print "All block replicas"
+    print ','.join(sites)
+
+    #print subscriptions only when asked for full block
+    if onlycomplete:    
         sites = sorted(phedexClient.getSubscriptionSites(ds))
         print "subscriptions:"
-        print ', '.join(sites)
-        size = dbsClient.getDatasetSize(ds)
-        print formatSize(size)
-    else:
-        # if file given
-        if sys.argv[1] == '-f':
-            wfs = [l.strip() for l in open(sys.argv[2]) if l.strip()]
-        # if single workflow
-        else:
-            wfs = [sys.argv[1]]
+        print ','.join(sites)
+    
+    #print in the clean ready-to-use format    
+    if clean:
+        sites2 = []
+        for s in sites:
+            if '_MSS' in s or '_Export' in s:
+                continue
+            s = s.replace('_Disk','')
+            sites2.append(s)
+        print ','.join(sites2)
 
-        for wf in wfs:
-            print wf
-            ds = reqMgrClient.getInputDataSet(url, wf)                
-            sites = sorted(phedexClient.getBlockReplicaSites(ds,True))
-            print ds
-            print "block replicas (only complete):"
-            print ', '.join(sites)
-            sites = sorted(phedexClient.getSubscriptionSites(ds))
-            print "subscriptions:"
-            print ', '.join(sites)
-            size = dbsClient.getDatasetSize(ds)
-            print formatSize(size)
+    #and the size
+    size = dbsClient.getDatasetSize(ds)
+    print formatSize(size)
+
+def main():
+    usage = 'python %prog [OPTIONS] [WORKFLOW]'
+    parser = optparse.OptionParser(usage = usage)
+    parser.add_option('-f', '--file', help='Text file with several workflows',dest='file')
+    parser.add_option('-a', '--any', help='Any block replica',dest='anyb', action='store_true')
+    parser.add_option('-d', '--dataset', help='A single dataset',dest='dataset', action='store_true')
+    parser.add_option('-p', '--pileup', action="store_true", help='Look also for pileup location', dest='pileup')
+    parser.add_option('-c', '--clean', help='Print ready to use site list',dest='clean', action="store_true", default=False)
+    (options, args) = parser.parse_args()
+
+    #if file
+    if options.file:
+        ls = [l.strip() for l in open(options.file) if l.strip()]
+    elif len(args) == 1:
+        ls = [args[0]]
+    else:
+        parser.error("Provide the workflow of a file of workflows")
+
+    for x in ls:
+        #if dataset given
+        if options.dataset:
+            printDsLocation(x, options.clean, options.anyb)
+        else:
+            print x
+            workflow = reqMgrClient.Workflow(x)
+            ds = workflow.info['InputDataset']
+            printDsLocation(ds, options.clean, options.anyb)
+            #pile ups
+            if options.dataset and 'MCPileup' in workflow.info:
+                pu = workflow.info['MCPileup']
+                print "Pile up:"
+                printDsLocation(ds, options.clean, options.anyb)
 
 if __name__ == '__main__':
     main()
