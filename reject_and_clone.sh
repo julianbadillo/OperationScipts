@@ -1,25 +1,29 @@
 #!/usr/bin/sh
-# Makes an ACDC of a small workflow with input
-#
+#  Rejects and clone a given request.
+#  And assigns the clone to the location of the original
+#  request. Should be used only on requests that are completed
+#  and have input.
+
+
 wf=$1
-task=$2 #StepOneProc
 
 #Abort and clone
-echo "python WmAgentScripts/makeACDC.py $wf $task"
-out="$(python WmAgentScripts/makeACDC.py $wf $task)"
+echo "python WmAgentScripts/rejectAndClone.py $wf"
+out="$(python WmAgentScripts/rejectAndClone.py $wf)"
 #out="$(cat out.txt)"
 echo "${out}"
 
-#get the name of the ACDC from the output
-acdc=`echo "${out}"| grep -A1 'Created:' | tail -1`
+#get the name of the clone from the output
+clone=`echo "${out}"| grep 'Cloned workflow:' | awk '{print $3}'`
 
 #get the input location
-echo "python getInputLocation.py -c $wf"
-out="$(python getInputLocation.py -c $wf)"
+echo "python getInputLocation.py -c $clone"
+out="$(python getInputLocation.py -c $clone)"
 echo "${out}"
 location=`echo "${out}" | grep -A2 'subscriptions:' | tail -1`
 
 #assign
-echo "python WmAgentScripts/assignWorkflow.py -t production -s $location $acdc"
-out="$(python WmAgentScripts/assignWorkflow.py -t production -s $location $acdc)"  
+echo "python WmAgentScripts/assignWorkflow.py -t production -s $location $clone"
+out="$(python WmAgentScripts/assignWorkflow.py -t production -s $location $clone)"  
 echo $out
+
